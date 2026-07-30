@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Cash In/Out Tracker</title>
+<link rel="stylesheet" href="style.css">
+
+</body>
+</html>
+</head>
+<body>
+
+<div class="wrap">
+  <h1>Cash in / cash out tracker</h1>
+  <div id="status" style="font-size:12px;color:#7a7a74;margin:-10px 0 14px;"></div>
+
+  <div class="balances">
+    <div class="bal-card" id="cashCard">
+      <div class="label">Cash on hand</div>
+      <div class="value" id="cashVal">₱0</div>
+    </div>
+    <div class="bal-card" id="gcashCard">
+      <div class="label">GCash</div>
+      <div class="value" id="gcashVal">₱0</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Add transaction</h2>
+    <div class="row row-combo">
+      <div class="seg" id="typeSeg">
+        <button data-val="CASH IN" class="type-in">Cash in</button>
+        <button data-val="CASH OUT" class="type-out">Cash out</button>
+      </div>
+      <div class="seg" id="noteSeg">
+        <button data-val="ACTUAL" class="note-actual">Actual (cash)</button>
+        <button data-val="GCASH" class="note-gcash">GCash</button>
+      </div>
+    </div>
+    <div class="row">
+      <input type="number" id="amountInput" placeholder="Amount" min="0" step="1">
+    </div>
+    <div class="row">
+      <textarea id="notesInput" placeholder="Extra note (optional)"></textarea>
+    </div>
+    <button class="add-btn" id="addBtn">Add transaction</button>
+    <button class="add-btn cancel-btn" id="cancelEditBtn" style="display:none;">Cancel edit</button>
+  </div>
+
+  <div class="card">
+    <h2>Summary</h2>
+    <div id="summary"></div>
+  </div>
+
+  <div class="card">
+    <h2>Logs</h2>
+    <div class="stats" id="stats"></div>
+    <div class="log-scroll"><div id="log"></div></div>
+    <button class="show-more" id="showMoreBtn" style="display:none;"></button>
+  </div>
+</div>
+
+<div id="deleteModal" class="modal">
+  <div class="modal-box">
+    <h3>Delete Transaction</h3>
+    <p>
+      Are you sure you want to delete this transaction?<br>
+      This will automatically update your balances.
+    </p>
+
+    <div class="modal-actions">
+      <button id="cancelDelete" class="cancel-delete">
+        Cancel
+      </button>
+
+      <button id="confirmDelete" class="confirm-delete">
+        Delete
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="back.js"></script>
+</body>
+</html>
