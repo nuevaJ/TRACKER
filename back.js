@@ -63,7 +63,7 @@ function render() {
   const logEl = document.getElementById('log');
   const statsEl = document.getElementById('stats');
   const totalProfit = state.log.reduce((s, t) => s + t.profit, 0);
-  statsEl.innerHTML = `<span>${state.log.length} transactions</span><span>${peso(totalProfit)} total profit</span>`;
+  statsEl.innerHTML = `<span>${state.log.length} Transactions</span><span>${peso(totalProfit)} Total Profit</span>`;
 
   const cashInTx = state.log.filter(t => t.type === 'CASH IN');
   const cashOutTx = state.log.filter(t => t.type === 'CASH OUT');
@@ -107,10 +107,10 @@ function render() {
       </div>
       <div class="log-right">
         <div class="amt">${peso(t.amount)}</div>
-        <div>profit ${peso(t.profit)}</div>
+        <div>Profit ${peso(t.profit)}</div>
         ${selectMode ? '' : `
-        <button class="edit" data-idx="${realIdx}">edit</button>
-        <button class="del" data-idx="${realIdx}">delete</button>`}
+        <button class="edit" data-idx="${realIdx}">Edit</button>
+        <button class="del" data-idx="${realIdx}">Delete</button>`}
       </div>
     </div>`;
   }).join('');
@@ -149,7 +149,7 @@ function updateSelectToolbar() {
   const selBtn = document.getElementById('selectModeBtn');
   const delSelBtn = document.getElementById('deleteSelectedBtn');
   const delAllBtn = document.getElementById('deleteAllBtn');
-  selBtn.textContent = selectMode ? 'Cancel select' : 'Select';
+  selBtn.textContent = selectMode ? 'Cancel' : 'Select';
   selBtn.classList.toggle('active', selectMode);
   delSelBtn.style.display = selectMode ? 'inline-block' : 'none';
   delSelBtn.textContent = `Delete selected (${selectedIds.size})`;
@@ -176,10 +176,10 @@ function openDeleteModal(mode) {
     text.textContent = 'Final na?';
   } else if (mode === 'selected') {
     title.textContent = 'Sure ka na beh?';
-    text.textContent = `Final na? Tatanggalin ang ${selectedIds.size} transaction(s).`;
+    text.textContent = `Final na? Tatanggalin ko na to ${selectedIds.size} transaction(s).`;
   } else if (mode === 'all') {
     title.textContent = 'Sure ka na beh?';
-    text.textContent = `Final na? Tatanggalin lahat ng ${state.log.length} transactions. Hindi na maibabalik 'to.`;
+    text.textContent = `Final na? Tatanggalin lahat ng ${state.log.length} transactions. Hindi ko na ibabalik ito ha.`;
   }
   document.getElementById('deleteModal').classList.add('show');
 }

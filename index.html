@@ -6,9 +6,6 @@
 
 <title>Gcash Tracker</title>
 <link rel="stylesheet" href="style.css">
-
-</body>
-</html>
 </head>
 <body>
 
@@ -28,7 +25,7 @@
   </div>
 
   <div class="card">
-    <h2>Add transaction</h2>
+    <h2 id="transactionFormTitle">Add transaction</h2>
     <div class="row row-combo">
       <div class="seg" id="typeSeg">
         <button data-val="CASH IN" class="type-in">Cash in</button>
@@ -41,6 +38,9 @@
     </div>
     <div class="row">
       <input type="number" id="amountInput" placeholder="Amount" min="0" step="1">
+    </div>
+    <div class="row" id="profitRow" style="display:none;">
+      <input type="number" id="profitInput" placeholder="Profit" min="0" step="1">
     </div>
     <div class="row">
       <textarea id="notesInput" placeholder="Extra note (optional)"></textarea>
@@ -67,14 +67,10 @@
   </div>
 </div>
 
-<div id="deleteModal" class="modal">
-  <div class="modal-box">
-
+<div id="deleteModal" class="modal" aria-hidden="true">
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <h3 id="modalTitle">Sure ka na beh?</h3>
-
-    <p id="modalText">
-      Final na?
-    </p>
+    <p id="modalText">Final na?</p>
 
     <div class="modal-actions">
       <button id="cancelDelete" class="cancel-delete">
@@ -85,7 +81,6 @@
         Delete
       </button>
     </div>
-
   </div>
 </div>
 
