@@ -1,9 +1,19 @@
-let state = { cash: 21566, gcash: 43572, log: [] };
+let state = { cash: 0, gcash: 0, log: [] };
 let type = 'CASH IN';
 let note = 'ACTUAL';
 let displayLimit = 20;
 let editingIndex = null;
-let deleteIndex = null;
+let selectMode = false;
+let selectedIds = new Set();
+
+// modal-driven delete state
+let deleteMode = null;   // 'single' | 'selected' | 'all'
+let deleteIndex = null;  // used when deleteMode === 'single'
+
+function ensureIds() {
+  // Older saved entries may not have an id yet — backfill so select-mode works.
+  state.log.forEach((t, i) => { if (t.id === undefined) t.id = 'legacy-' + i + '-' + t.ts; });
+}
 
 function setStatus(msg, isError) {
   const el = document.getElementById('status');
@@ -15,6 +25,7 @@ function load() {
   try {
     const raw = localStorage.getItem('tracker-data');
     if (raw) state = JSON.parse(raw);
+    ensureIds();
     setStatus('');
   } catch (e) {
     setStatus('Could not load saved data: ' + e, true);
@@ -37,6 +48,12 @@ function save() {
 function peso(n) {
   n = Math.round(n);
   return '₱' + n.toLocaleString();
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
 }
 
 function render() {
@@ -70,33 +87,50 @@ function render() {
   if (state.log.length === 0) {
     logEl.innerHTML = '<div class="empty">No transactions yet</div>';
     document.getElementById('showMoreBtn').style.display = 'none';
+    updateSelectToolbar();
     return;
   }
+
   const reversed = state.log.slice().reverse();
   const visible = reversed.slice(0, displayLimit);
   logEl.innerHTML = visible.map((t, i) => {
     const realIdx = state.log.length - 1 - i;
+    const checked = selectedIds.has(t.id) ? 'checked' : '';
     return `<div class="log-item">
       <div class="log-left">
-        <span class="tag ${t.type === 'CASH IN' ? 'in' : 'out'}">${t.type}</span>
-        <span class="tag note">${t.note}</span>
-        ${t.notes ? `<div class="log-notes">${escapeHtml(t.notes)}</div>` : ''}
+        ${selectMode ? `<input type="checkbox" class="log-check" data-id="${t.id}" ${checked}>` : ''}
+        <div class="log-left-text">
+          <span class="tag ${t.type === 'CASH IN' ? 'in' : 'out'}">${t.type}</span>
+          <span class="tag note">${t.note}</span>
+          ${t.notes ? `<div class="log-notes">${escapeHtml(t.notes)}</div>` : ''}
+        </div>
       </div>
       <div class="log-right">
         <div class="amt">${peso(t.amount)}</div>
         <div>profit ${peso(t.profit)}</div>
+        ${selectMode ? '' : `
         <button class="edit" data-idx="${realIdx}">edit</button>
-        <button class="del" data-idx="${realIdx}">delete</button>
+        <button class="del" data-idx="${realIdx}">delete</button>`}
       </div>
     </div>`;
   }).join('');
 
-  logEl.querySelectorAll('.edit').forEach(btn => {
-    btn.addEventListener('click', () => editTx(parseInt(btn.dataset.idx)));
-  });
-  logEl.querySelectorAll('.del').forEach(btn => {
-    btn.addEventListener('click', () => deleteTx(parseInt(btn.dataset.idx)));
-  });
+  if (selectMode) {
+    logEl.querySelectorAll('.log-check').forEach(cb => {
+      cb.addEventListener('change', () => {
+        if (cb.checked) selectedIds.add(cb.dataset.id);
+        else selectedIds.delete(cb.dataset.id);
+        updateSelectToolbar();
+      });
+    });
+  } else {
+    logEl.querySelectorAll('.edit').forEach(btn => {
+      btn.addEventListener('click', () => editTx(parseInt(btn.dataset.idx)));
+    });
+    logEl.querySelectorAll('.del').forEach(btn => {
+      btn.addEventListener('click', () => deleteTx(parseInt(btn.dataset.idx)));
+    });
+  }
 
   const moreBtn = document.getElementById('showMoreBtn');
   const remaining = reversed.length - visible.length;
@@ -106,24 +140,109 @@ function render() {
   } else {
     moreBtn.style.display = 'none';
   }
+  updateSelectToolbar();
 }
 
-function escapeHtml(s) {
-  const d = document.createElement('div');
-  d.textContent = s;
-  return d.innerHTML;
+// ---------- select-mode toolbar ----------
+
+function updateSelectToolbar() {
+  const selBtn = document.getElementById('selectModeBtn');
+  const delSelBtn = document.getElementById('deleteSelectedBtn');
+  const delAllBtn = document.getElementById('deleteAllBtn');
+  selBtn.textContent = selectMode ? 'Cancel select' : 'Select';
+  selBtn.classList.toggle('active', selectMode);
+  delSelBtn.style.display = selectMode ? 'inline-block' : 'none';
+  delSelBtn.textContent = `Delete selected (${selectedIds.size})`;
+  delSelBtn.disabled = selectedIds.size === 0;
+  delAllBtn.style.display = selectMode ? 'none' : 'inline-block';
+  delAllBtn.disabled = state.log.length === 0;
 }
 
-function deleteTx(idx){
+document.getElementById('selectModeBtn').addEventListener('click', () => {
+  if (editingIndex !== null) cancelEdit();
+  selectMode = !selectMode;
+  selectedIds.clear();
+  render();
+});
 
-    deleteIndex = idx;
+// ---------- delete modal (single / selected / all) ----------
 
-    document
-        .getElementById("deleteModal")
-        .classList
-        .add("show");
-
+function openDeleteModal(mode) {
+  deleteMode = mode;
+  const title = document.getElementById('modalTitle');
+  const text = document.getElementById('modalText');
+  if (mode === 'single') {
+    title.textContent = 'Sure ka na beh?';
+    text.textContent = 'Final na?';
+  } else if (mode === 'selected') {
+    title.textContent = 'Sure ka na beh?';
+    text.textContent = `Final na? Tatanggalin ang ${selectedIds.size} transaction(s).`;
+  } else if (mode === 'all') {
+    title.textContent = 'Sure ka na beh?';
+    text.textContent = `Final na? Tatanggalin lahat ng ${state.log.length} transactions. Hindi na maibabalik 'to.`;
+  }
+  document.getElementById('deleteModal').classList.add('show');
 }
+
+function closeDeleteModal() {
+  deleteMode = null;
+  deleteIndex = null;
+  document.getElementById('deleteModal').classList.remove('show');
+}
+
+function deleteTx(idx) {
+  deleteIndex = idx;
+  openDeleteModal('single');
+}
+
+document.getElementById('deleteSelectedBtn').addEventListener('click', () => {
+  if (selectedIds.size === 0) return;
+  openDeleteModal('selected');
+});
+
+document.getElementById('deleteAllBtn').addEventListener('click', () => {
+  if (state.log.length === 0) return;
+  openDeleteModal('all');
+});
+
+document.getElementById('cancelDelete').onclick = closeDeleteModal;
+
+document.getElementById('confirmDelete').onclick = function () {
+  if (deleteMode === 'single') {
+    if (deleteIndex === null) return;
+    if (editingIndex === deleteIndex) cancelEdit();
+    const t = state.log[deleteIndex];
+    state.cash -= t.cashDelta;
+    state.gcash -= t.gcashDelta;
+    state.log.splice(deleteIndex, 1);
+  } else if (deleteMode === 'selected') {
+    if (editingIndex !== null) cancelEdit();
+    state.log = state.log.filter(t => {
+      if (selectedIds.has(t.id)) {
+        state.cash -= t.cashDelta;
+        state.gcash -= t.gcashDelta;
+        return false;
+      }
+      return true;
+    });
+    selectedIds.clear();
+    selectMode = false;
+  } else if (deleteMode === 'all') {
+    if (editingIndex !== null) cancelEdit();
+    state.log.forEach(t => {
+      state.cash -= t.cashDelta;
+      state.gcash -= t.gcashDelta;
+    });
+    state.log = [];
+    selectedIds.clear();
+  }
+
+  closeDeleteModal();
+  save();
+  render();
+};
+
+// ---------- add / edit transaction ----------
 
 function editTx(idx) {
   const t = state.log[idx];
@@ -132,6 +251,8 @@ function editTx(idx) {
   setActive('typeSeg', type);
   setActive('noteSeg', note);
   document.getElementById('amountInput').value = t.amount;
+  document.getElementById('profitInput').value = t.profit;
+  document.getElementById('profitRow').style.display = 'block';
   document.getElementById('notesInput').value = t.notes || '';
   editingIndex = idx;
   document.getElementById('addBtn').textContent = 'Update transaction';
@@ -144,7 +265,9 @@ function cancelEdit() {
   editingIndex = null;
   document.getElementById('addBtn').textContent = 'Add transaction';
   document.getElementById('cancelEditBtn').style.display = 'none';
+  document.getElementById('profitRow').style.display = 'none';
   document.getElementById('amountInput').value = '';
+  document.getElementById('profitInput').value = '';
   document.getElementById('notesInput').value = '';
 }
 
@@ -165,11 +288,19 @@ document.getElementById('noteSeg').addEventListener('click', e => {
   setActive('noteSeg', note);
 });
 
-document.getElementById('addBtn').addEventListener('click', async () => {
+document.getElementById('addBtn').addEventListener('click', () => {
   const amtEl = document.getElementById('amountInput');
   const amount = parseFloat(amtEl.value);
   if (!amount || amount <= 0) { amtEl.focus(); return; }
-  const profit = amount < 100 ? 5 : Math.ceil(amount / 1000) * 10;
+
+  // Profit is always auto-computed on ADD. It's only editable when
+  // updating an existing transaction (profitRow is shown by editTx()).
+  const autoProfit = amount < 100 ? 5 : Math.ceil(amount / 1000) * 10;
+  let profit = autoProfit;
+  if (editingIndex !== null) {
+    const pVal = parseFloat(document.getElementById('profitInput').value);
+    if (!isNaN(pVal)) profit = pVal;
+  }
   const amountIn = amount + profit;
 
   let cashDelta, gcashDelta;
@@ -191,7 +322,7 @@ document.getElementById('addBtn').addEventListener('click', async () => {
     state.cash = state.cash - old.cashDelta + cashDelta;
     state.gcash = state.gcash - old.gcashDelta + gcashDelta;
     state.log[editingIndex] = {
-      type, amount, profit, note,
+      id: old.id, type, amount, profit, note,
       notes: document.getElementById('notesInput').value.trim(),
       cashDelta, gcashDelta,
       ts: old.ts
@@ -201,6 +332,7 @@ document.getElementById('addBtn').addEventListener('click', async () => {
     state.cash += cashDelta;
     state.gcash += gcashDelta;
     state.log.push({
+      id: 'tx-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
       type, amount, profit, note,
       notes: document.getElementById('notesInput').value.trim(),
       cashDelta, gcashDelta,
@@ -221,6 +353,8 @@ document.getElementById('showMoreBtn').addEventListener('click', () => {
   render();
 });
 
+// ---------- editable balances ----------
+
 function makeEditable(cardId, key) {
   document.getElementById(cardId).addEventListener('click', () => {
     const card = document.getElementById(cardId);
@@ -231,7 +365,7 @@ function makeEditable(cardId, key) {
     const input = valEl.querySelector('input');
     input.focus();
     input.select();
-    const commit = async () => {
+    const commit = () => {
       const v = parseFloat(input.value);
       if (!isNaN(v)) { state[key] = v; save(); }
       render();
@@ -246,47 +380,3 @@ makeEditable('gcashCard', 'gcash');
 setActive('typeSeg', type);
 setActive('noteSeg', note);
 load();
-
-document
-.getElementById("cancelDelete")
-.onclick = function(){
-
-    deleteIndex = null;
-
-    document
-        .getElementById("deleteModal")
-        .classList
-        .remove("show");
-
-};
-
-
-document
-.getElementById("confirmDelete")
-.onclick = function(){
-
-    if(deleteIndex===null) return;
-
-    if(editingIndex===deleteIndex){
-        cancelEdit();
-    }
-
-    const t = state.log[deleteIndex];
-
-    state.cash -= t.cashDelta;
-    state.gcash -= t.gcashDelta;
-
-    state.log.splice(deleteIndex,1);
-
-    deleteIndex = null;
-
-    save();
-
-    render();
-
-    document
-        .getElementById("deleteModal")
-        .classList
-        .remove("show");
-
-};

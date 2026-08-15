@@ -1,4 +1,4 @@
-  * { box-sizing: border-box; }
+* { box-sizing: border-box; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     background: #f4f5f3;
@@ -93,7 +93,8 @@
     gap: 8px;
   }
   .log-item:last-child { border-bottom: none; }
-  .log-left { flex: 1; min-width: 0; }
+  .log-left { flex: 1; min-width: 0; display: flex; align-items: flex-start; gap: 4px; }
+  .log-left-text { flex: 1; min-width: 0; }
   .tag {
     display: inline-block;
     font-size: 10px;
@@ -134,12 +135,29 @@
   .edit { background: none; border: none; color: #1a4d99; font-size: 11px; cursor: pointer; padding: 0; margin-left: 8px; }
   .cancel-btn { background: #fff; color: #555; border: 1px solid #d8d7d0; margin-top: 8px; }
 
+  .log-toolbar { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  .toolbar-btn {
+    background: #f4f5f3;
+    border: 1px solid #d8d7d0;
+    border-radius: 7px;
+    padding: 6px 10px;
+    font-size: 11.5px;
+    color: #555;
+    cursor: pointer;
+  }
+  .toolbar-btn.danger { color: #a3341f; border-color: #f0d3cc; background: #fdf3f1; }
+  .toolbar-btn.active { background: #1f1f1d; color: #fff; border-color: #1f1f1d; }
+  .toolbar-btn:disabled { opacity: 0.5; cursor: default; }
+  .log-check { margin-right: 4px; margin-top: 2px; accent-color: #1f1f1d; }
+
   @media (max-width: 420px) {
     body { padding: 16px 10px 50px; }
     .row-combo { flex-direction: column; }
     .seg button { font-size: 12px; padding: 8px 2px; }
     .bal-card .value { font-size: 17px; }
     h1 { font-size: 18px; }
+    .log-toolbar { gap: 6px; }
+    .toolbar-btn { font-size: 11px; padding: 6px 8px; }
   }
 
   .modal{
